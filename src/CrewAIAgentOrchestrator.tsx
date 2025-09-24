@@ -195,7 +195,7 @@ export default function CrewAIAgentOrchestrator() {
     setOutputs((prev) => {
       const next = { ...prev };
       AGENTS.forEach((a) => {
-        if (!next[a.id]) next[a.id] = { status: "idle", output: "" };
+        if (!next[a.id]) next[a.id] = { status: "idle", output: {raw:""}};
       });
       return next;
     });
@@ -203,12 +203,12 @@ export default function CrewAIAgentOrchestrator() {
 
   function resetOutputs() {
     const next: Record<AgentId, AgentOutput> = {
-      researcher: { status: "idle", output: "" },
-      writer: { status: "idle", output: "" },
-      summarizer: { status: "idle", output: "" },
-      reviewer: { status: "idle", output: "" },
-      emailer: { status: "idle", output: "" },
-      delivery: { status: "idle", output: "" },
+      researcher: { status: "idle", output: {raw:""} },
+      writer: { status: "idle", output: {raw:""} },
+      summarizer: { status: "idle", output: {raw:""} },
+      reviewer: { status: "idle", output: {raw:""} },
+      emailer: { status: "idle", output: {raw:""} },
+      delivery: { status: "idle", output: {raw:""} },
     };
     setOutputs(next);
     setIsCompleted(false);
@@ -233,7 +233,7 @@ export default function CrewAIAgentOrchestrator() {
     setOutputs((prev) => {
       const next = { ...prev };
       for (const id of activeAgents)
-        next[id] = { status: "queued", output: "" };
+        next[id] = { status: "queued", output: {raw:""} };
       return next;
     });
 
@@ -886,14 +886,16 @@ async function runAgent(agentId) {
 // ------------------------------------------------------
 // Utilities
 // ------------------------------------------------------
+
 // function wait(ms: number) {
 //   return new Promise((resolve) => setTimeout(resolve, ms));
 // }
-// function cryptoRandom() {
-//   if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
-//     const a = new Uint32Array(2);
-//     (crypto as any).getRandomValues(a);
-//     return `${a[0].toString(16)}${a[1].toString(16)}`;
-//   }
-//   return Math.random().toString(16).slice(2);
-// }
+
+function cryptoRandom() {
+  if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
+    const a = new Uint32Array(2);
+    (crypto as any).getRandomValues(a);
+    return `${a[0].toString(16)}${a[1].toString(16)}`;
+  }
+  return Math.random().toString(16).slice(2);
+}
