@@ -26,7 +26,6 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "include": ["vite.config.ts"],
     "types": ["react", "react-dom", "vite/client"]
   }
 }

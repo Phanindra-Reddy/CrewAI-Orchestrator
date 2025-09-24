@@ -11,7 +11,7 @@ import {
   Trash2,
   Clock4,
   Settings,
-  ChevronRight,
+  //ChevronRight,
   Copy,
   Download,
   ListTree,
@@ -29,7 +29,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+//import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -42,11 +42,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Progress } from "@/components/ui/progress";
+//import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import ChatContainer from "./ChatContainer";
-import { log } from "console";
+// import ChatContainer from "./ChatContainer";
+// import { log } from "console";
 import { Spinner } from "./components/ui/spinner";
 import ReactMarkdown from "react-markdown";
 import LoaderGrid from "./LoaderGrid";
@@ -105,7 +105,15 @@ export type AgentId = (typeof AGENTS)[number]["id"];
 export type AgentStatus = "idle" | "queued" | "running" | "done" | "error";
 export interface AgentOutput {
   status: AgentStatus;
-  output: string;
+  output: {
+    raw: string;
+    pydantic?: null;
+    json_dict?: null;
+    tasks_output?: null;
+    agent?: string;
+    output_format?: string;
+    ms?:number
+  };
   startedAt?: number;
   completedAt?: number;
   ms?: number;
@@ -157,12 +165,12 @@ export default function CrewAIAgentOrchestrator() {
   const [emailCfg, setEmailCfg] = useState(defaultEmail);
 
   const [outputs, setOutputs] = useState<Record<AgentId, AgentOutput>>({
-    researcher: { status: "idle", output: "" },
-    writer: { status: "idle", output: "" },
-    summarizer: { status: "idle", output: "" },
-    reviewer: { status: "idle", output: "" },
-    emailer: { status: "idle", output: "" },
-    delivery: { status: "idle", output: "" },
+    researcher: { status: "idle", output: { raw: "" } },
+    writer: { status: "idle", output: { raw: "" } },
+    summarizer: { status: "idle", output: { raw: "" } },
+    reviewer: { status: "idle", output: { raw: "" } },
+    emailer: { status: "idle", output: { raw: "" } },
+    delivery: { status: "idle", output: { raw: "" } },
   });
 
   const [isRunning, setIsRunning] = useState(false);
@@ -285,7 +293,7 @@ export default function CrewAIAgentOrchestrator() {
       return Object.fromEntries(
         Object.keys(prev).map((key) => [
           key,
-          { status: "running", startedAt: now, output: "" },
+          { status: "running", startedAt: now, output: { raw: "" } },
         ])
       ) as Record<AgentId, AgentOutput>;
     });
@@ -348,8 +356,6 @@ export default function CrewAIAgentOrchestrator() {
     ).length;
     return { done, total };
   }, [outputs, activeAgents]);
-
-  console.log("576", outputs);
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950">
@@ -771,7 +777,7 @@ export default function CrewAIAgentOrchestrator() {
                                     size="icon"
                                     variant="ghost"
                                     onClick={() => {
-                                      copyText(state.output);
+                                      copyText(state?.output?.raw);
                                       toast("Content copied successfully.");
                                     }}
                                     disabled={!state.output}
@@ -787,7 +793,10 @@ export default function CrewAIAgentOrchestrator() {
                                     size="icon"
                                     variant="ghost"
                                     onClick={() =>
-                                      downloadText(`${a.id}.txt`, state.output)
+                                      downloadText(
+                                        `${a.id}.txt`,
+                                        state?.output?.raw
+                                      )
                                     }
                                     disabled={!state.output}
                                   >
@@ -877,14 +886,14 @@ async function runAgent(agentId) {
 // ------------------------------------------------------
 // Utilities
 // ------------------------------------------------------
-function wait(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-function cryptoRandom() {
-  if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
-    const a = new Uint32Array(2);
-    (crypto as any).getRandomValues(a);
-    return `${a[0].toString(16)}${a[1].toString(16)}`;
-  }
-  return Math.random().toString(16).slice(2);
-}
+// function wait(ms: number) {
+//   return new Promise((resolve) => setTimeout(resolve, ms));
+// }
+// function cryptoRandom() {
+//   if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
+//     const a = new Uint32Array(2);
+//     (crypto as any).getRandomValues(a);
+//     return `${a[0].toString(16)}${a[1].toString(16)}`;
+//   }
+//   return Math.random().toString(16).slice(2);
+// }
