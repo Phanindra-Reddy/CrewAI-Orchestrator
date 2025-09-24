@@ -106,13 +106,14 @@ export type AgentStatus = "idle" | "queued" | "running" | "done" | "error";
 export interface AgentOutput {
   status: AgentStatus;
   output: {
-    raw: string;
+    raw?: string;
     pydantic?: null;
     json_dict?: null;
     tasks_output?: null;
     agent?: string;
     output_format?: string;
-    ms?:number
+    ms?: number;
+    error?: string;
   };
   startedAt?: number;
   completedAt?: number;
@@ -195,7 +196,7 @@ export default function CrewAIAgentOrchestrator() {
     setOutputs((prev) => {
       const next = { ...prev };
       AGENTS.forEach((a) => {
-        if (!next[a.id]) next[a.id] = { status: "idle", output: {raw:""}};
+        if (!next[a.id]) next[a.id] = { status: "idle", output: { raw: "" } };
       });
       return next;
     });
@@ -203,12 +204,12 @@ export default function CrewAIAgentOrchestrator() {
 
   function resetOutputs() {
     const next: Record<AgentId, AgentOutput> = {
-      researcher: { status: "idle", output: {raw:""} },
-      writer: { status: "idle", output: {raw:""} },
-      summarizer: { status: "idle", output: {raw:""} },
-      reviewer: { status: "idle", output: {raw:""} },
-      emailer: { status: "idle", output: {raw:""} },
-      delivery: { status: "idle", output: {raw:""} },
+      researcher: { status: "idle", output: { raw: "" } },
+      writer: { status: "idle", output: { raw: "" } },
+      summarizer: { status: "idle", output: { raw: "" } },
+      reviewer: { status: "idle", output: { raw: "" } },
+      emailer: { status: "idle", output: { raw: "" } },
+      delivery: { status: "idle", output: { raw: "" } },
     };
     setOutputs(next);
     setIsCompleted(false);
@@ -233,7 +234,7 @@ export default function CrewAIAgentOrchestrator() {
     setOutputs((prev) => {
       const next = { ...prev };
       for (const id of activeAgents)
-        next[id] = { status: "queued", output: {raw:""} };
+        next[id] = { status: "queued", output: { raw: "" } };
       return next;
     });
 
@@ -298,41 +299,101 @@ export default function CrewAIAgentOrchestrator() {
       ) as Record<AgentId, AgentOutput>;
     });
 
-    const res = await fetch(
-      "https://inapposite-pamula-sailorly.ngrok-free.dev/v1/agents/run-orchestrator-multi",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt,
-        }),
+    try {
+      const res = await fetch(
+        "https://inapposite-pamula-sailorly.ngrok-free.dev/v1/agents/run-orchestrator-multi22",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt }),
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status} ${res.statusText}`);
       }
-    );
 
-    const data = await res.json();
+      const data = await res.json();
+      console.log("response", data);
 
-    console.log("response", data);
+      const nowCompleted = Date.now();
 
-    setOutputs((prev) => {
-      const now = Date.now();
+      // Update outputs with successful response
+      setOutputs(
+        (prev) =>
+          Object.fromEntries(
+            Object.keys(prev).map((agentId) => [
+              agentId,
+              {
+                ...prev[agentId],
+                status: "done",
+                output:
+                  data?.result?.message?.[
+                    agentId.slice(0, 1).toUpperCase() + agentId.slice(1)
+                  ] ?? prev[agentId]?.output,
+                startedAt: prev[agentId]?.startedAt,
+                completedAt: nowCompleted,
+                ms: data.duration_ms,
+              },
+            ])
+          ) as Record<AgentId, AgentOutput>
+      );
+    } catch (error: any) {
+      const nowError = Date.now();
 
-      return Object.fromEntries(
-        Object.keys(prev).map((agentId) => [
-          agentId,
-          {
-            ...prev[agentId],
-            status: "done",
-            output:
-              data?.result?.message[
-                agentId.slice(0, 1).toUpperCase() + agentId.slice(1)
-              ] ?? prev[agentId]?.output,
-            startedAt: prev[agentId]?.startedAt,
-            completedAt: now,
-            ms: data.duration_ms,
-          },
-        ])
-      ) as Record<AgentId, AgentOutput>;
-    });
+      // Update outputs with error for all agents
+      setOutputs(
+        (prev) =>
+          Object.fromEntries(
+            Object.keys(prev).map((agentId) => [
+              agentId,
+              {
+                ...prev[agentId],
+                status: "error",
+                output: { error: error.message || "Something went wrong" },
+                startedAt: prev[agentId]?.startedAt,
+                completedAt: nowError,
+              },
+            ])
+          ) as Record<AgentId, AgentOutput>
+      );
+    }
+
+    // const res = await fetch(
+    //   "https://inapposite-pamula-sailorly.ngrok-free.dev/v1/agents/run-orchestrator-multi",
+    //   {
+    //     method: "POST",
+    //     headers: { "Content-Type": "application/json" },
+    //     body: JSON.stringify({
+    //       prompt,
+    //     }),
+    //   }
+    // );
+
+    // const data = await res.json();
+
+    // console.log("response", data);
+
+    // setOutputs((prev) => {
+    //   const now = Date.now();
+
+    //   return Object.fromEntries(
+    //     Object.keys(prev).map((agentId) => [
+    //       agentId,
+    //       {
+    //         ...prev[agentId],
+    //         status: "done",
+    //         output:
+    //           data?.result?.message[
+    //             agentId.slice(0, 1).toUpperCase() + agentId.slice(1)
+    //           ] ?? prev[agentId]?.output,
+    //         startedAt: prev[agentId]?.startedAt,
+    //         completedAt: now,
+    //         ms: data.duration_ms,
+    //       },
+    //     ])
+    //   ) as Record<AgentId, AgentOutput>;
+    // });
   }
 
   function copyText(txt: string) {
@@ -723,122 +784,135 @@ export default function CrewAIAgentOrchestrator() {
                     : !!selectedAgents[a.id]);
 
                 return (
-                  <motion.div
-                    key={a.id}
-                    layout
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`${
-                      isActive && state?.output?.raw ? " " : "hidden"
-                    }`}
-                  >
-                    <Card
-                      // className={`overflow-hidden border-2 ${
-                      //   isActive ? "" : "opacity-50"
-                      // }`}
-                      className="overflow-hidden border-2"
-                    >
-                      <div
-                        className={`h-1.5 bg-gradient-to-r ${
-                          state.status === "done"
-                            ? "from-emerald-500 to-lime-500"
-                            : state.status === "running"
-                            ? "from-blue-500 to-cyan-500"
-                            : "from-slate-200 to-slate-200 dark:from-slate-800 dark:to-slate-800"
-                        }`}
-                      ></div>
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`h-10 w-10 rounded-xl bg-gradient-to-br ${a.gradient} grid place-items-center text-white shadow`}
-                            >
-                              <Icon className="h-5 w-5" />
+                  isActive &&
+                  (state?.output?.raw || state?.output?.error) && (
+                    <>
+                      <motion.div
+                        key={a.id}
+                        layout
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        //className={`${isActive ? " " : "hidden"}`}
+                      >
+                        <Card
+                          // className={`overflow-hidden border-2 ${
+                          //   isActive ? "" : "opacity-50"
+                          // }`}
+                          className="overflow-hidden border-2"
+                        >
+                          <div
+                            className={`h-1.5 bg-gradient-to-r ${
+                              state.status === "done"
+                                ? "from-emerald-500 to-lime-500"
+                                : state.status === "running"
+                                ? "from-blue-500 to-cyan-500"
+                                : "from-slate-200 to-slate-200 dark:from-slate-800 dark:to-slate-800"
+                            }`}
+                          ></div>
+                          <CardHeader className="pb-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={`h-10 w-10 rounded-xl bg-gradient-to-br ${a.gradient} grid place-items-center text-white shadow`}
+                                >
+                                  <Icon className="h-5 w-5" />
+                                </div>
+                                <div>
+                                  <CardTitle>{a.name}</CardTitle>
+                                  <CardDescription className="flex items-center gap-2">
+                                    <Badge
+                                      className={`${status.color} capitalize`}
+                                    >
+                                      {status.label}
+                                    </Badge>
+                                    {state.ms ? (
+                                      <span className="text-xs text-muted-foreground">
+                                        {state.ms} ms
+                                      </span>
+                                    ) : null}
+                                  </CardDescription>
+                                </div>
+                              </div>
+                              <TooltipProvider>
+                                <div className="flex items-center gap-1">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          copyText(state?.output?.raw);
+                                          toast("Content copied successfully.");
+                                        }}
+                                        disabled={!state.output}
+                                      >
+                                        <Copy className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Copy</TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() =>
+                                          downloadText(
+                                            `${a.id}.txt`,
+                                            state?.output?.raw
+                                          )
+                                        }
+                                        disabled={!state.output}
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Download</TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </TooltipProvider>
                             </div>
-                            <div>
-                              <CardTitle>{a.name}</CardTitle>
-                              <CardDescription className="flex items-center gap-2">
-                                <Badge className={`${status.color} capitalize`}>
-                                  {status.label}
-                                </Badge>
-                                {state.ms ? (
-                                  <span className="text-xs text-muted-foreground">
-                                    {state.ms} ms
-                                  </span>
-                                ) : null}
-                              </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="rounded-lg border bg-muted/40 p-3 min-h-[120px] max-h-[240px] text-sm overflow-x-auto">
+                              {state.status === "running" && (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  Generating…
+                                </div>
+                              )}
+                              {state.status === "idle" && (
+                                <span className="text-muted-foreground">
+                                  Waiting to run…
+                                </span>
+                              )}
+
+                              {state.output?.raw && (
+                                <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                                  <ReactMarkdown>
+                                    {state.output.raw}
+                                  </ReactMarkdown>
+                                </div>
+                              )}
+
+                              {state.output?.error && (
+                                <div className="text-sm text-red-500 whitespace-pre-wrap">
+                                  Error: {state.output.error}
+                                </div>
+                              )}
                             </div>
-                          </div>
-                          <TooltipProvider>
-                            <div className="flex items-center gap-1">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => {
-                                      copyText(state?.output?.raw);
-                                      toast("Content copied successfully.");
-                                    }}
-                                    disabled={!state.output}
-                                  >
-                                    <Copy className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Copy</TooltipContent>
-                              </Tooltip>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() =>
-                                      downloadText(
-                                        `${a.id}.txt`,
-                                        state?.output?.raw
-                                      )
-                                    }
-                                    disabled={!state.output}
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Download</TooltipContent>
-                              </Tooltip>
-                            </div>
-                          </TooltipProvider>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="rounded-lg border bg-muted/40 p-3 min-h-[120px] max-h-[240px] text-sm overflow-x-auto">
-                          {state.status === "running" && (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Generating…
-                            </div>
-                          )}
-                          {state.status === "idle" && (
-                            <span className="text-muted-foreground">
-                              Waiting to run…
-                            </span>
-                          )}
-                          {state.output && (
-                            <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-                              <ReactMarkdown>
-                                {state?.output?.raw}
-                              </ReactMarkdown>
-                            </div>
-                          )}
-                        </div>
-                        {a.id === "delivery" && (
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            Note: Connect your SMTP credentials in the backend.
-                            This card displays the delivery log/result.
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </motion.div>
+                            {a.id === "delivery" && (
+                              <p className="mt-2 text-xs text-muted-foreground">
+                                Note: Connect your SMTP credentials in the
+                                backend. This card displays the delivery
+                                log/result.
+                              </p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    </>
+                  )
                 );
               })}
             </div>
