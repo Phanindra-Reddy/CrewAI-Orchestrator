@@ -527,7 +527,7 @@ export default function CrewAIAgentOrchestrator() {
               <Separator className="my-2" />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="my-2">
+                {/* <div className="my-2">
                   <Label>Execution</Label>
                   <RadioGroup
                     value={execution}
@@ -557,7 +557,7 @@ export default function CrewAIAgentOrchestrator() {
                       Parallel
                     </Label>
                   </RadioGroup>
-                </div>
+                </div> */}
                 <div className="space-y-2 my-2 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between">
