@@ -1,11 +1,23 @@
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "jsx": "react-jsx",
-    // ...
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-    // ...
-  }
+    "composite": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }
+
+// {
+//   "compilerOptions": {
+//     "jsx": "react-jsx",
+//     // ...
+//     "baseUrl": ".",
+//     "paths": {
+//       "@/*": ["./src/*"]
+//     }
+//     // ...
+//   }
+// }
