@@ -301,7 +301,7 @@ export default function CrewAIAgentOrchestrator() {
 
     try {
       const res = await fetch(
-        "https://inapposite-pamula-sailorly.ngrok-free.dev/v1/agents/run-orchestrator-multi22",
+        "https://inapposite-pamula-sailorly.ngrok-free.dev/v1/agents/run-orchestrator-multi",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
