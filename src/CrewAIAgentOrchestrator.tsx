@@ -704,7 +704,10 @@ export default function CrewAIAgentOrchestrator() {
             <div className="grid grid-cols-1 gap-6 max-w-[1100px]">
               {AGENTS.map((a) => {
                 const Icon = a.icon;
-                const state = outputs[a.id] || { status: "idle", output: "" };
+                const state = outputs[a.id] || {
+                  status: "idle",
+                  output: { raw: "" },
+                };
                 const status = prettyStatus[state.status as AgentStatus];
 
                 const isActive =
