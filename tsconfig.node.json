@@ -26,7 +26,7 @@
     "composite": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "types": ["vite/client"]
+    "types": ["react", "react-dom", "vite/client"]
   },
   "include": ["vite.config.ts"],
   "types": ["react", "react-dom", "vite/client"]
